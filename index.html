@@ -18,5 +18,20 @@
 </head>
 <body>
 <iframe src="https://script.google.com/macros/s/AKfycbxTOk1AQxfl-DxuFTewjVv_LRR0NVOnCGQqKI8gA7K8pGb8qpLS5xZ7QG39JZIWsONf/exec" title="CK Expense"></iframe>
+<script>
+// 記帳網頁（Google Apps Script）以 postMessage 向本頁取得／保存 PIN；只接受 Google 網域來源，且只回覆給發問的框。
+(function () {
+  var K = 'ckpin', OK = /^https:\/\/([a-z0-9-]+\.)*(googleusercontent|google)\.com$/;
+  addEventListener('message', function (e) {
+    if (!OK.test(e.origin)) return;
+    var d = e.data || {};
+    try {
+      if (d.ck === 'getpin') e.source.postMessage({ ck: 'pin', pin: localStorage.getItem(K) || '' }, e.origin);
+      else if (d.ck === 'setpin' && typeof d.pin === 'string' && d.pin) localStorage.setItem(K, d.pin);
+      else if (d.ck === 'clearpin') localStorage.removeItem(K);
+    } catch (err) {}
+  });
+})();
+</script>
 </body>
 </html>
