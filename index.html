@@ -38,6 +38,9 @@
   th { color:var(--mute); font-weight:500; font-size:12px; }
   tr.day { cursor:pointer; }
   tr.day:hover { background:var(--bg); }
+  tr.today td { background:rgba(250,204,21,.13); font-weight:700; }
+  tr.today td:first-child { color:#facc15; box-shadow:inset 3px 0 0 #facc15; padding-left:8px; }
+  .today-tag { display:inline-block; margin-left:6px; padding:0 6px; border-radius:8px; background:#facc15; color:#1a1d24; font-size:11px; font-weight:700; vertical-align:middle; }
   select { flex:1; padding:8px; border:1px solid var(--line); border-radius:10px; font-size:15px; background:var(--card2); color:var(--ink); }
   .tp { font-size:13px; display:flex; justify-content:space-between; }
   .cats { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
@@ -194,7 +197,7 @@ async function start(fresh) {
   if (!D && loadCache()) {            // 有上次的資料：立刻顯示，之後再更新
     D.today = localToday();
     month = D.today.slice(0, 7);
-    init(); render(); shown = true;
+    init(); render(); showToday(); shown = true;
   }
   $('syncTag').textContent = shown ? '・同步中…' : '';
   try {
@@ -210,6 +213,7 @@ async function start(fresh) {
     if (!shown) init();
     $('date').value = $('date').value || D.today;
     render();
+    if (!shown) showToday();
   } catch (e) {
     if (!shown) $('syncTag').textContent = '';
   }
@@ -316,7 +320,7 @@ function render() {
     rows.push(D.days.find(x => x.date === date) || emptyDay(date));
   }
   $('list').innerHTML = '<tr><th>日期</th>' + first.map(p => `<th>${p}</th>`).join('') + '</tr>' +
-    rows.map(d => `<tr class="day" data-d="${d.date}"><td>${d.date.slice(5)}</td>` +
+    rows.map(d => `<tr class="day${d.date === D.today ? ' today' : ''}" data-d="${d.date}"><td>${d.date === D.today ? '📍' : ''}${d.date.slice(5)}${d.date === D.today ? '<span class="today-tag">今天</span>' : ''}</td>` +
       first.map(p => `<td class="p-${p}">${d.who[p].note ? `<span class="note-ico" title="${esc(d.who[p].note)}">📝</span>` : ''}${d.who[p].value ? fmt(d.who[p].value) : '-'}</td>`).join('') + '</tr>').join('');
 }
 
@@ -372,7 +376,11 @@ $('add').onclick = () => {
   sync('addEntry', who, v, date, note);
 };
 $('amount').addEventListener('keydown', e => { if (e.key === 'Enter') $('add').click(); });
-const go = m => { month = m; render(); ensureMonth(m); };
+function showToday() {
+  const el = document.querySelector('tr.today');
+  if (el) el.scrollIntoView({ block: 'center' });
+}
+const go = m => { month = m; render(); ensureMonth(m); if (m === D.today.slice(0, 7)) showToday(); };
 $('toToday').onclick = () => go(D.today.slice(0, 7));
 $('refresh').onclick = async () => {
   if (!D) return;
