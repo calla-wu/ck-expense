@@ -12,26 +12,380 @@
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
 <style>
-  html, body { margin:0; height:100%; background:#0f1115; }
-  iframe { position:fixed; inset:0; width:100%; height:100%; border:0; }
+  :root { --bg:#0f1115; --card:#1a1d24; --card2:#232733; --ink:#e5e7eb; --mute:#9ca3af; --line:#333948; --accent:#3b82f6; --calla:#f472b6; --kerker:#2dd4bf; color-scheme:dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system,"Noto Sans TC",sans-serif; }
+  .wrap { width:100%; max-width:none; margin:0; padding:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  h2 { font-size:14px; margin:0 0 10px; color:var(--mute); font-weight:600; }
+  .who { display:flex; gap:8px; margin-bottom:10px; }
+  .who button { flex:1; padding:10px; border:2px solid var(--line); background:var(--card2); color:var(--ink); border-radius:10px; font-size:15px; cursor:pointer; }
+  .who button.on[data-p="Calla"] { border-color:var(--calla); background:rgba(244,114,182,.16); }
+  .who button.on[data-p="Kerker"] { border-color:var(--kerker); background:rgba(45,212,191,.16); }
+  .row { display:flex; gap:8px; }
+  input[type=number], input[type=date], input[type=text], input[type=password], textarea { width:100%; padding:10px; border:1px solid var(--line); border-radius:10px; font-size:16px; font-family:inherit; background:var(--card2); color:var(--ink); }
+  .btn { padding:10px 18px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-size:15px; cursor:pointer; white-space:nowrap; }
+  .btn:disabled { opacity:.5; }
+  .btn.ghost { background:var(--card2); color:var(--ink); border:1px solid var(--line); }
+  .hint { color:var(--mute); font-size:12px; margin-top:6px; }
+  .totals { display:flex; gap:8px; }
+  .totals > div { flex:1; background:var(--bg); border-radius:10px; padding:10px 12px; }
+  .totals > div > span { display:block; font-size:12px; color:var(--mute); margin-bottom:4px; }
+  .totals b { font-size:18px; }
+  table { width:100%; border-collapse:collapse; }
+  td, th { padding:8px 4px; border-bottom:1px solid var(--line); text-align:right; }
+  td:first-child, th:first-child { text-align:left; }
+  th { color:var(--mute); font-weight:500; font-size:12px; }
+  tr.day { cursor:pointer; }
+  tr.day:hover { background:var(--bg); }
+  select { flex:1; padding:8px; border:1px solid var(--line); border-radius:10px; font-size:15px; background:var(--card2); color:var(--ink); }
+  .tp { font-size:13px; display:flex; justify-content:space-between; }
+  .cats { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .cats button { flex:1; min-width:60px; padding:8px; border:1px solid var(--line); background:var(--card2); color:var(--ink); border-radius:10px; font-size:14px; cursor:pointer; }
+  .cats button.on { border-color:var(--accent); background:rgba(59,130,246,.2); }
+  .tabs { display:flex; gap:6px; margin-bottom:8px; }
+  .tabs button { border:0; background:none; color:var(--mute); padding:4px 10px; border-radius:8px; cursor:pointer; font-size:14px; }
+  .tabs button.on { background:var(--bg); color:var(--ink); font-weight:600; }
+  .note-ico { cursor:pointer; margin-right:6px; font-size:12px; }
+  .dim { color:var(--mute); font-size:12px; }
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; padding:16px; }
+  .modal.show { display:flex; }
+  .modal .box { background:var(--card); border-radius:14px; padding:18px; width:100%; max-width:420px; max-height:90vh; overflow:auto; }
+  .item { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); }
+  .item .x { border:0; background:none; color:#dc2626; cursor:pointer; font-size:13px; }
+  .p-Calla { color:var(--calla); } .p-Kerker { color:var(--kerker); }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#374151; color:#fff; padding:8px 16px; border-radius:20px; display:none; }
 </style>
 </head>
 <body>
-<iframe src="https://script.google.com/macros/s/AKfycbxTOk1AQxfl-DxuFTewjVv_LRR0NVOnCGQqKI8gA7K8pGb8qpLS5xZ7QG39JZIWsONf/exec" title="CK Expense"></iframe>
+<div class="wrap">
+
+  <div class="card">
+    <h2>新增數字</h2>
+    <div class="who" id="who"></div>
+    <div class="row">
+      <input type="number" id="amount" inputmode="decimal" step="any" placeholder="輸入數字">
+      <button class="btn" id="add">加入</button>
+    </div>
+    <div class="cats" id="cats"></div>
+    <input type="text" id="noteIn" placeholder="備注（點上方分類，或自行輸入）" style="margin-top:8px">
+    <div class="row" style="margin-top:8px; align-items:center">
+      <span class="dim" style="white-space:nowrap">日期</span>
+      <input type="date" id="date">
+    </div>
+    <div class="hint">預設加到今天，可改日期補登。</div>
+  </div>
+
+  <div class="card">
+    <h2>總計 <span id="syncTag" class="dim"></span></h2>
+    <div class="totals" id="totals"><div><span>載入中…</span></div><div><span>&nbsp;</span></div></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="align-items:center; margin-bottom:8px">
+      <h2 style="margin:0; white-space:nowrap">每日明細</h2>
+      <button class="btn ghost" id="toToday" title="回到本月" style="padding:6px 10px">📅</button>
+      <button class="btn ghost" id="refresh" title="重新整理" style="padding:6px 10px">🔄</button>
+      <select id="monthSel"></select>
+    </div>
+    <table id="list"><tr><td class="dim" style="text-align:center; padding:18px">載入中…</td></tr></table>
+    <div class="hint">點選某一天可修改數字、編輯備註（寫入儲存格備註）。</div>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <h2 id="mTitle"></h2>
+    <div id="mBody"></div>
+    <div class="row" style="margin-top:12px; justify-content:flex-end">
+      <button class="btn ghost" id="mClose">關閉</button>
+      <button class="btn" id="mSave">儲存</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="lock" style="background:var(--bg)">
+  <div class="box" style="max-width:320px">
+    <h2 style="font-size:16px; color:var(--ink)">CK記帳</h2>
+    <div class="dim" style="margin-bottom:8px">請輸入 PIN</div>
+    <input type="password" id="pinIn" autocomplete="current-password" inputmode="text" placeholder="PIN">
+    <div id="pinErr" class="hint" style="color:#f87171; min-height:18px"></div>
+    <div class="row" style="margin-top:8px; justify-content:flex-end"><button class="btn" id="pinOk">確認</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
 <script>
-// 記帳網頁（Google Apps Script）以 postMessage 向本頁取得／保存 PIN；只接受 Google 網域來源，且只回覆給發問的框。
-(function () {
-  var K = 'ckpin', OK = /^https:\/\/([a-z0-9-]+\.)*(googleusercontent|google)\.com$/;
-  addEventListener('message', function (e) {
-    if (!OK.test(e.origin)) return;
-    var d = e.data || {};
-    try {
-      if (d.ck === 'getpin') e.source.postMessage({ ck: 'pin', pin: localStorage.getItem(K) || '' }, e.origin);
-      else if (d.ck === 'setpin' && typeof d.pin === 'string' && d.pin) localStorage.setItem(K, d.pin);
-      else if (d.ck === 'clearpin') localStorage.removeItem(K);
-    } catch (err) {}
+const CATS = [['伙食', '🍙'], ['交通', '🚌'], ['玩樂', '🎈'], ['其他', '✨']];
+let cat = null;
+let D = null, who = null, month = null, openDate = null;
+const loaded = {};   // 'YYYY-MM' -> true（該月資料已載入）
+const yearTot = {};  // 'YYYY' -> { 'YYYY-MM': {Calla, Kerker} }
+const $ = id => document.getElementById(id);
+const fmt = n => (Math.round(n * 100) / 100).toLocaleString();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 2200); }
+const store = {
+  get() { try { return localStorage.getItem('ckpin') || ''; } catch (e) { return ''; } },
+  set(v) { try { localStorage.setItem('ckpin', v); } catch (e) {} },
+  del() { try { localStorage.removeItem('ckpin'); } catch (e) {} },
+};
+let pin = store.get();
+
+// ---- 後端 API（Google Apps Script 網頁應用程式，純 JSON）----
+const API = 'https://script.google.com/macros/s/AKfycbxTOk1AQxfl-DxuFTewjVv_LRR0NVOnCGQqKI8gA7K8pGb8qpLS5xZ7QG39JZIWsONf/exec';
+async function api(fn, ...args) {
+  let res;
+  try {
+    // text/plain 屬於「簡單請求」，不會觸發 CORS 預檢
+    res = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn, args }) });
+  } catch (e) { throw new Error('網路連線失敗'); }
+  let j;
+  try { j = await res.json(); } catch (e) { throw new Error('伺服器回應異常'); }
+  if (!j.ok) throw new Error(j.error || '發生錯誤');
+  return j.data;
+}
+const needsPin = fn => fn !== 'checkPin' && fn !== 'ping';
+function run(fn, ...args) {
+  const a = needsPin(fn) ? [pin, ...args] : args;
+  return api(fn, ...a).catch(e => {
+    const msg = e.message || String(e);
+    if (/PIN/.test(msg)) showLock(msg); else toast(msg);
+    throw e;
   });
-})();
+}
+
+// ---- 本機快取：開啟時先顯示上次的資料，背景再同步 ----
+const CACHE_KEY = 'ckcache1';
+const localToday = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
+let saveTimer = null;
+function saveCache() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    if (!D) return;
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ D, loaded, yearTot })); } catch (e) {}
+  }, 300);
+}
+function clearCache() { try { localStorage.removeItem(CACHE_KEY); } catch (e) {} }
+function loadCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if (!c || !c.D || !c.D.people) return false;
+    D = c.D; Object.assign(loaded, c.loaded || {}); Object.assign(yearTot, c.yearTot || {});
+    return true;
+  } catch (e) { return false; }
+}
+
+function showLock(msg) {
+  if (/PIN 錯誤$/.test(msg || '')) { store.del(); clearCache(); pin = ''; }
+  $('pinErr').textContent = msg || '';
+  $('lock').classList.add('show');
+  $('pinIn').value = ''; $('pinIn').focus();
+}
+
+function init() {
+  who = (() => { try { return localStorage.who || null; } catch (e) { return null; } })();
+  $('date').value = D.today;
+}
+
+async function start(fresh) {
+  if (!pin) return showLock('');
+  let shown = false;
+  if (!D && loadCache()) {            // 有上次的資料：立刻顯示，之後再更新
+    D.today = localToday();
+    month = D.today.slice(0, 7);
+    init(); render(); shown = true;
+  }
+  $('syncTag').textContent = shown ? '・同步中…' : '';
+  try {
+    const r = await run('boot', !!fresh);
+    store.set(pin);
+    $('lock').classList.remove('show');
+    const keepMonth = shown && month !== r.month && loaded[month] ? month : null;
+    if (!D) D = { today: r.today, people: r.people, monthList: r.monthList, days: [] };
+    D.today = r.today; D.people = r.people; D.monthList = r.monthList;
+    month = keepMonth || r.month;
+    mergeMonth(r.month, r.days);
+    Object.assign(yearTot, r.yearTot);
+    if (!shown) init();
+    $('date').value = $('date').value || D.today;
+    render();
+  } catch (e) {
+    if (!shown) $('syncTag').textContent = '';
+  }
+  $('syncTag').textContent = '';
+}
+
+$('pinOk').onclick = async () => {
+  const v = $('pinIn').value;
+  if (!v) return;
+  pin = v; $('pinErr').textContent = '';
+  start();
+};
+$('pinIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('pinOk').click(); });
+
+const notesOf = d => D.people.filter(p => d.who[p].note).map(p => p + '：' + d.who[p].note).join('\n');
+
+let chain = Promise.resolve();
+const enqueue = fn => { chain = chain.then(fn).catch(() => {}); return chain; };
+
+const sumMonth = m => D.days.filter(d => d.date.startsWith(m)).reduce((o, d) => { D.people.forEach(p => o[p] = (o[p] || 0) + d.who[p].value); return o; }, {});
+const sortDays = () => D.days.sort((a, b) => (a.date < b.date ? 1 : -1));
+
+function mergeMonth(m, days) {
+  D.days = D.days.filter(d => !d.date.startsWith(m)).concat(days);
+  sortDays(); loaded[m] = true;
+}
+
+const inflight = {};
+const once = (key, fn) => inflight[key] || (inflight[key] = fn().finally(() => delete inflight[key]));
+
+// 切換到某個月時才載入：該月明細＋該年總計（沒載入過才抓）
+function ensureMonth(m) {
+  const y = m.slice(0, 4), tasks = [];
+  if (!loaded[m]) tasks.push(once('m' + m, async () => { const r = await run('loadMonth', m); mergeMonth(m, r.days); }));
+  if (!yearTot[y]) tasks.push(once('y' + y, async () => { const r = await run('loadYear', y); yearTot[y] = r.tot; }));
+  if (!tasks.length) return Promise.resolve();
+  return Promise.all(tasks).then(() => { if (D) render(); }).catch(() => {});
+}
+
+function putDay(day) {
+  day.total = D.people.reduce((t, p) => t + day.who[p].value, 0);
+  const i = D.days.findIndex(x => x.date === day.date);
+  if (i >= 0) D.days[i] = day; else { D.days.push(day); sortDays(); }
+  const m = day.date.slice(0, 7), y = m.slice(0, 4);
+  if (loaded[m] && yearTot[y]) { const w = sumMonth(m); yearTot[y][m] = D.people.reduce((o, p) => (o[p] = w[p] || 0, o), {}); }
+  else delete yearTot[y];   // 該月尚未載入：該年總計之後重新抓
+}
+
+const getDay = date => JSON.parse(JSON.stringify(D.days.find(x => x.date === date) || emptyDay(date)));
+
+function evalExpr(expr, fallback) {
+  const t = String(expr).trim().replace(/^=/, '');
+  if (t === '') return 0;
+  if (/^[0-9+\-*/().\s]+$/.test(t)) { try { const v = Function('"use strict";return (' + t + ')')(); if (isFinite(v)) return v; } catch (e) {} }
+  return fallback;
+}
+
+// 先更新畫面，再依序送出；伺服器回傳該日實際內容後校正，失敗則整份重抓
+function sync(fn, ...args) {
+  return enqueue(async () => {
+    try {
+      const day = await run(fn, ...args);
+      putDay(day); render(); ensureMonth(month);
+    } catch (e) {
+      Object.keys(loaded).forEach(k => delete loaded[k]); Object.keys(yearTot).forEach(k => delete yearTot[k]);
+      D.days = []; await ensureMonth(month); render();
+    }
+  });
+}
+
+const emptyDay = date => ({ date, who: D.people.reduce((o, p) => (o[p] = { value: 0, expr: '', note: '' }, o), {}) });
+
+function monthOptions() {
+  const set = new Set(D.monthList);
+  set.add(D.today.slice(0, 7)); set.add(month);
+  return [...set].sort().reverse();
+}
+
+function render() {
+  saveCache();
+  const first = D.people;
+  $('who').innerHTML = first.map(p => `<button data-p="${p}" class="${p === who ? 'on' : ''}">${p}</button>`).join('');
+  $('who').querySelectorAll('button').forEach(b => b.onclick = () => { who = b.dataset.p; try{localStorage.who = who}catch(e){} render(); });
+
+  const [y, mo] = month.split('-').map(Number);
+  const monthW = loaded[month] ? sumMonth(month) : ((yearTot[y] || {})[month] || null);
+  let yearW = null;
+  if (yearTot[y]) { yearW = {}; Object.keys(yearTot[y]).forEach(k => first.forEach(p => yearW[p] = (yearW[p] || 0) + yearTot[y][k][p])); }
+  const block = (label, w) => `<div><span>${label}</span>` +
+    first.map(p => `<div class="tp"><span class="p-${p}">${p}</span><b>${w ? fmt(w[p] || 0) : '…'}</b></div>`).join('') + '</div>';
+  $('totals').innerHTML = block(`${y} 年 ${mo} 月`, monthW) + block(`${y} 年`, yearW);
+
+  const opts = monthOptions();
+  $('monthSel').innerHTML = opts.map(m => `<option value="${m}" ${m === month ? 'selected' : ''}>${m}</option>`).join('');
+
+  if (!loaded[month]) {
+    $('list').innerHTML = `<tr><td class="dim" style="text-align:center; padding:18px">載入中…</td></tr>`;
+    return;
+  }
+  const n = new Date(y, mo, 0).getDate();
+  const rows = [];
+  for (let d = 1; d <= n; d++) {
+    const date = month + '-' + ('0' + d).slice(-2);
+    rows.push(D.days.find(x => x.date === date) || emptyDay(date));
+  }
+  $('list').innerHTML = '<tr><th>日期</th>' + first.map(p => `<th>${p}</th>`).join('') + '</tr>' +
+    rows.map(d => `<tr class="day" data-d="${d.date}"><td>${d.date.slice(5)}</td>` +
+      first.map(p => `<td class="p-${p}">${d.who[p].note ? `<span class="note-ico" title="${esc(d.who[p].note)}">📝</span>` : ''}${d.who[p].value ? fmt(d.who[p].value) : '-'}</td>`).join('') + '</tr>').join('');
+}
+
+function openModal(date) {
+  openDate = date;
+  const d = getDay(date);
+  $('mTitle').textContent = date;
+  $('mBody').innerHTML = D.people.map(p => `
+    <div style="margin-bottom:12px">
+      <div class="p-${p}"><b>${p}</b></div>
+      <input type="text" class="expr" data-p="${p}" value="${esc(d.who[p].expr)}" placeholder="金額或公式，例如 =100+50" style="margin:4px 0">
+      <textarea class="note" data-p="${p}" rows="2" placeholder="備註（細節）">${esc(d.who[p].note)}</textarea>
+    </div>`).join('');
+  $('modal').classList.add('show');
+}
+
+$('list').addEventListener('click', e => { const tr = e.target.closest('tr.day'); if (tr) openModal(tr.dataset.d); });
+$('mClose').onclick = () => $('modal').classList.remove('show');
+$('modal').onclick = e => { if (e.target === $('modal')) $('modal').classList.remove('show'); };
+$('mSave').onclick = () => {
+  const edits = {}, day = getDay(openDate);
+  D.people.forEach(p => {
+    edits[p] = { expr: document.querySelector(`.expr[data-p="${p}"]`).value, note: document.querySelector(`.note[data-p="${p}"]`).value.trim() };
+    day.who[p] = { value: evalExpr(edits[p].expr, day.who[p].value), expr: edits[p].expr, note: edits[p].note };
+  });
+  putDay(day); render();
+  $('modal').classList.remove('show'); toast('已儲存');
+  sync('saveDay', openDate, edits);
+};
+
+function renderCats() {
+  $('cats').innerHTML = CATS.map(([c, i]) => `<button data-c="${c}" class="${c === cat ? 'on' : ''}">${i} ${c}</button>`).join('');
+  $('cats').querySelectorAll('button').forEach(b => b.onclick = () => {
+    cat = b.dataset.c;
+    if (cat === '其他') { $('noteIn').value = ''; $('noteIn').focus(); }
+    else $('noteIn').value = cat;
+    renderCats();
+  });
+}
+renderCats();
+
+$('add').onclick = () => {
+  const v = $('amount').value, n = Number(v);
+  if (!who) return toast('請先選 Calla 或 Kerker');
+  if (v === '' || !isFinite(n)) return toast('請輸入數字');
+  const date = $('date').value || D.today, note = $('noteIn').value.trim();
+  const day = getDay(date), w = day.who[who];
+  w.expr = w.expr === '' ? String(n) : '=' + w.expr.replace(/^=/, '') + (n < 0 ? '-' + (-n) : '+' + n);
+  w.value += n;
+  if (note) w.note = (w.note ? w.note + '\n' : '') + n + ' ' + note;
+  putDay(day); render();
+  $('amount').value = ''; $('noteIn').value = ''; cat = null; renderCats(); toast('已加入');
+  sync('addEntry', who, v, date, note);
+};
+$('amount').addEventListener('keydown', e => { if (e.key === 'Enter') $('add').click(); });
+const go = m => { month = m; render(); ensureMonth(m); };
+$('toToday').onclick = () => go(D.today.slice(0, 7));
+$('refresh').onclick = async () => {
+  if (!D) return;
+  const m = month;
+  Object.keys(loaded).forEach(k => delete loaded[k]); Object.keys(yearTot).forEach(k => delete yearTot[k]); D.days = [];
+  toast('更新中…');
+  await start(true);
+  if (m !== D.today.slice(0, 7)) { month = m; render(); await ensureMonth(m); }
+  toast('已更新');
+};
+$('monthSel').onchange = e => go(e.target.value);
+
+start();
 </script>
 </body>
 </html>
